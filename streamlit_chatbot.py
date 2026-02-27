@@ -1,5 +1,5 @@
 from langchain_groq import ChatGroq
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import streamlit as st
 
@@ -12,27 +12,45 @@ with st.sidebar:
     st.header("Configuracion del Chatbot")
     st.info("Ajusta la temperatura y el modelo para personalizar las respuestas del chatbot.\n\nRecuerda que una temperatura más alta generará respuestas más creativas, mientras que una temperatura más baja hará que las respuestas sean más conservadoras.")
     temperature = st.slider("Temperatura", 0.0, 1.0, 0.5, 0.1)
-    model_name = st.selectbox("Modelo", ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b", "openai/gpt-oss-20b"])
+    model_name = st.selectbox("Modelos", ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b", "openai/gpt-oss-20b"])
+
+# Personalidad configurable
+personalidad = st.selectbox(
+    "Personalidad del asistente",
+    [
+        "Útil y amigable",
+        "Profesional y formal", 
+        "Casual y relajado",
+        "Experto técnico",
+        "Creativo y divertido"
+    ]
+)                          
 
 # Configurar modelo
 chat_model = ChatGroq(model=model_name, temperature=temperature)
 
+# Definir los mensajes del sistema segun la personalidad
+system_messages = {
+    "Útil y amigable": "Eres un asistente útil y amigable llamado ChatBot Pro. Responde de manera clara y concisa.",
+    "Profesional y formal": "Eres un asistente profesional y formal. Proporciona respuestas precisas y bien estructuradas.",
+    "Casual y relajado": "Eres un asistente casual y relajado. Habla de forma natural y amigable, como un buen amigo.",
+    "Experto técnico": "Eres un asistente experto técnico. Proporciona respuestas detalladas con precisión técnica.",
+    "Creativo y divertido": "Eres un asistente creativo y divertido. Usa analogías, ejemplos creativos y mantén un tono alegre."
+}
+
+# ChatPromptTemplate con personalidad dinamica
+chat_prompt = ChatPromptTemplate.from_messages([
+    ("system", system_messages[personalidad]),
+    ("human", "Historial conversacion:\n{historial}\n\nPregunta actual: {mensaje}")
+])
+
+
+# Generar la respuesta usando LCEL (LangChain Expression Language) y el modelo de chat
+cadena = chat_prompt | chat_model
+
 # Inicializar el historial de mensajes
 if "mensajes" not in st.session_state:
     st.session_state.mensajes = []
-
-prompt_template = PromptTemplate(
-    input_variables=["mensaje", "historial"],
-    template="""Eres un asistente inteligente, util y amigable llamado ChatBotMVG que ayuda a los usuarios a responder sus preguntas. Utiliza el historial de mensajes para proporcionar respuestas contextuales y relevantes. Si no sabes la respuesta, di que no lo sabes en lugar de inventar una respuesta.
-    
-Historial de conversacion:
-{historial}
-        
-Responde de manera clara y concisa a la siguiente pregunta: {mensaje}"""
-)
-
-# Generar la respuesta usando LCEL (LangChain Expression Language) y el modelo de chat
-cadena = prompt_template | chat_model
 
 # mostrar los mensajes previos en la interfaz
 for msg in st.session_state.mensajes:
@@ -55,6 +73,17 @@ if pregunta:
     # Mostrar el mensaje del usuario en la interfaz
     with st.chat_message("user"):
         st.markdown(pregunta)
+    
+    # Preparar historial como texto
+    historial_texto =""
+    for msg in st.session_state.mensajes[-10:]: # Ultimos 10 mensajes
+        if isinstance(msg, HumanMessage):
+            historial_texto += f"usuario: {msg.content}\n"
+        elif isinstance(msg, AIMessage):
+            historial_texto += f"Asistente: {msg.content}\n"
+            
+    if not historial_texto:
+        historial_texto ="(No hay historial previo)"
         
     # Generar y mostrar la respuesta del modelo en tiempo real usando streaming
     try:
