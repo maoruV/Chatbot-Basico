@@ -5,7 +5,7 @@ import streamlit as st
 
 # Configuracion la pagina de la app
 st.set_page_config(page_title="Chatbot Basico", page_icon="🤖")
-st.title("🤖Chatbot Basico con LangChain ")
+st.title("🤖 Chatbot Basico con LangChain ")
 st.markdown("Este es un chatbot basico contruido con langchain y streamlit. ¡Escribe tu mensaje y el chatbot responderá!")
 
 with st.sidebar:
@@ -73,7 +73,7 @@ if pregunta:
         st.session_state.mensajes.append(AIMessage(content=full_response))
         
     except Exception as e:
-        # ¿Qué tipo de errores podrían ocurrir aquí?
+        # Manejo de errores al generar la respuesta del modelo
         st.error(f"Error al generar respuesta: {str(e)}")
         st.info("Verifica que tu API Key esté configurada correctamente.")
             
